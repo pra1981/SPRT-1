@@ -1,0 +1,48 @@
+SPRT.withISO <- function(dAQL, dLQ, alpha, beta, Re.ISO, n.ISO){
+#get AQL, LQ, alpha, beta from the ISO
+ AQL <- dAQL; LQ <- dLQ;
+ a <- alpha ; b <- beta
+ A <- (1-b)/a ; B <- b / (1-a)
+ roh <- (LQ*(1-AQL)) / (AQL*(1-LQ))
+
+ ###### Compute the variables of the lineary function: s * n + h0 & h1 ######
+ s <- log((1-AQL)/(1-LQ))/log(roh) #log = natural logarithm ln in R
+ h0 <- log(B)/log(roh) ; h1 <- log(A)/log(roh)
+
+ ###### Compute the datapoints for the linear function ######
+ n <- seq(0,n.ISO,1)
+ nRej <- 0
+ nAcc <- n*s + h0
+ for(i in 0:n.ISO){
+ nRej[i+1] <- n[i+1]*s + h1
+ if(nRej[i+1] > Re.ISO){ # Set the ISO limit
+ nRej[i+1] = Re.ISO
+ }
+ }
+ ###### Plot the function ######
+ plot(n,nAcc,type="l", xlim=c(0,n.ISO),ylim=c(0,Re.ISO+2), col="green3", lwd=2.5, xlab="Number of Units
+Inspected", ylab="Number of Defects Observed", main="SPRT")
+ lines(n,nRej, col="red", lwd=2.5)
+ lines(c(max(n),max(n)+0.1), c(max(nAcc),Re.ISO), col="green3", lwd=2.5)
+
+ ###### Calculate the output-matrix ######
+ mDefects <- matrix(rep(0,(max(ceiling(nRej))+1)*3),ncol=3) # genereate the output matrix
+ colnames(mDefects) <- c("Number of Defects","H0: accept","H1: accept")
+ mDefects[,1] <- seq(0,max(ceiling(nRej)),1)
+
+ for(i in 0:length(mDefects[,2])){ # Reject boundary
+ if((i / s - h0 /s) < 0){
+ mDefects[i,2] <- NA
+ } else {
+ mDefects[i,2] <- ceiling(mDefects[i,1] / s - h0 /s)
+ }
+ }
+ for(i in 0:length(mDefects[,3])-1){ # Accept boundary
+ if(i < min(nRej)){
+ mDefects[i,3] <- NA
+ } else {
+ mDefects[i+1,3] <- ceiling(i / s - h1/s)
+ }
+ }
+ return(mDefects)
+}
